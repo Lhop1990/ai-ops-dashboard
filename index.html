@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>AI Ops Dashboard â Liven</title>
+  <title>AI Ops Dashboard - Liven</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
@@ -57,7 +57,7 @@
 const { useState } = React;
 const { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
 
-// âââ DATA ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- DATA ------------------------------------------------------------
 const TOOLS = [
   { name: "ChatGPT Business", seats: 120, costPerSeat: 25, color: "#10a37f", monthly: 3000 },
   { name: "Claude Team", seats: 42, costPerSeat: 25, color: "#d97706", monthly: 1050 },
@@ -101,7 +101,7 @@ const CURSOR_MODELS = [
 
 const CURSOR_STATS = { aiShare: "66.0%", agentEdits: "108.1K", tabCompletions: "4.5K", messagesSent: "3K" };
 
-// âââ COMPONENTS ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+// --- COMPONENTS ------------------------------------------------------
 function KPI({ label, value, sub }) {
   return (
     <div className="kpi">
@@ -174,7 +174,7 @@ function CostsTab() {
     <>
       <div className="kpi-row">
         {TOOLS.filter(activeTool).map(t => (
-          <KPI key={t.name} label={t.name} value={`$${t.monthly.toLocaleString()}/mo`} sub={`${t.seats} seats Ã $${t.costPerSeat}`} />
+          <KPI key={t.name} label={t.name} value={`$${t.monthly.toLocaleString()}/mo`} sub={`${t.seats} seats x $${t.costPerSeat}`} />
         ))}
       </div>
       <div className="card">
@@ -210,7 +210,7 @@ function CostsTab() {
               </tr>
             ))}
             <tr style={{fontWeight:700, borderTop:'2px solid #21262d'}}>
-              <td>Total</td><td>{totalSeats}</td><td>â</td><td>${totalMonthly.toLocaleString()}</td><td>${totalAnnual.toLocaleString()}</td><td>100%</td>
+              <td>Total</td><td>{totalSeats}</td><td>-</td><td>${totalMonthly.toLocaleString()}</td><td>${totalAnnual.toLocaleString()}</td><td>100%</td>
             </tr>
           </tbody>
         </table>
@@ -226,7 +226,7 @@ function OptimizationTab() {
     <>
       <div className="savings-box">
         <h3>Confirmed Savings</h3>
-        <div className="big">${confirmedMonthlySavings}/mo Â· ${(confirmedMonthlySavings*12).toLocaleString()}/yr</div>
+        <div className="big">${confirmedMonthlySavings}/mo | ${(confirmedMonthlySavings*12).toLocaleString()}/yr</div>
         <p style={{marginTop:8, fontSize:14, color:'#8b949e'}}>From removing {REMOVE_CHATGPT.length + REMOVE_CLAUDE.length} duplicate subscriptions</p>
       </div>
       <div className="kpi-row">
@@ -251,7 +251,7 @@ function OptimizationTab() {
         </div>
       </div>
       <div className="card">
-        <h3>Awaiting Response â Keeping Both</h3>
+        <h3>Awaiting Response - Keeping Both</h3>
         <p style={{fontSize:13, color:'#8b949e', marginBottom:12}}>These {KEEPING_BOTH.length} users have dual subscriptions and haven't responded to the survey yet. Follow up to potentially save an additional ${potentialExtra}/mo.</p>
         <div className="user-list">
           {KEEPING_BOTH.map(u => <span className="user-tag" key={u}>{u}</span>)}
