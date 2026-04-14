@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Ops Dashboard â Liven</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react/18.2.0/umd/react.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-dom/18.2.0/umd/react-dom.production.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/babel-standalone/7.23.9/babel.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/recharts/2.12.7/Recharts.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f1117; color: #e1e4e8; }
+    .app { max-width: 1280px; margin: 0 auto; padding: 24px; }
+    .header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 32px; }
+    .header h1 { font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #7c3aed, #06b6d4); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .header .updated { font-size: 13px; color: #8b949e; }
+    .tabs { display: flex; gap: 4px; margin-bottom: 28px; background: #161b22; border-radius: 12px; padding: 4px; }
+    .tab { padding: 10px 20px; border-radius: 10px; border: none; background: transparent; color: #8b949e; font-size: 14px; font-weight: 500; cursor: pointer; transition: all 0.2s; }
+    .tab:hover { color: #e1e4e8; }
+    .tab.active { background: #7c3aed; color: #fff; }
+    .kpi-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .kpi { background: #161b22; border: 1px solid #21262d; border-radius: 12px; padding: 20px; }
+    .kpi .label { font-size: 13px; color: #8b949e; margin-bottom: 6px; }
+    .kpi .value { font-size: 28px; font-weight: 700; }
+    .kpi .sub { font-size: 12px; color: #8b949e; margin-top: 4px; }
+    .card { background: #161b22; border: 1px solid #21262d; border-radius: 12px; padding: 24px; margin-bottom: 20px; }
+    .card h3 { font-size: 16px; font-weight: 600; margin-bottom: 16px; }
+    .tool-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 16px; margin-bottom: 20px; }
+    .tool-card { background: #0d1117; border: 1px solid #21262d; border-radius: 10px; padding: 18px; }
+    .tool-card .name { font-size: 15px; font-weight: 600; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; }
+    .tool-card .dot { width: 10px; height: 10px; border-radius: 50%; }
+    .tool-card .stat { font-size: 13px; color: #8b949e; margin-bottom: 3px; }
+    .tool-card .stat span { color: #e1e4e8; font-weight: 500; }
+    .chart-container { width: 100%; height: 300px; }
+    table { width: 100%; border-collapse: collapse; font-size: 14px; }
+    th { text-align: left; padding: 10px 14px; color: #8b949e; font-weight: 500; border-bottom: 1px solid #21262d; }
+    td { padding: 10px 14px; border-bottom: 1px solid #161b22; }
+    .badge { display: inline-block; padding: 2px 10px; border-radius: 20px; font-size: 12px; font-weight: 500; }
+    .badge-green { background: #0d3320; color: #3fb950; }
+    .badge-yellow { background: #3d2e00; color: #d29922; }
+    .badge-red { background: #3d1418; color: #f85149; }
+    .badge-purple { background: #2d1b4e; color: #a371f7; }
+    .savings-box { background: linear-gradient(135deg, #0d3320, #1a3a2a); border: 1px solid #238636; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+    .savings-box h3 { color: #3fb950; }
+    .savings-box .big { font-size: 36px; font-weight: 700; color: #3fb950; }
+    .user-list { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+    .user-tag { background: #21262d; padding: 4px 10px; border-radius: 6px; font-size: 12px; color: #c9d1d9; }
+    .tip-box { background: #1c1e2a; border-left: 3px solid #7c3aed; padding: 16px; border-radius: 0 8px 8px 0; margin-top: 16px; font-size: 13px; color: #c9d1d9; }
+    .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 768px) { .two-col { grid-template-columns: 1fr; } }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState } = React;
+const { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } = Recharts;
+
+// âââ DATA ââââââââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+const TOOLS = [
+  { name: "ChatGPT Business", seats: 120, costPerSeat: 25, color: "#10a37f", monthly: 3000 },
+  { name: "Claude Team", seats: 42, costPerSeat: 25, color: "#d97706", monthly: 1050 },
+  { name: "Cursor Team", seats: 68, costPerSeat: 20, color: "#3b82f6", monthly: 1360 },
+  { name: "GitHub Copilot", seats: null, costPerSeat: 19, color: "#8b949e", monthly: null },
+];
+
+const activeTool = (t) => t.seats !== null;
+const totalSeats = TOOLS.filter(activeTool).reduce((s, t) => s + t.seats, 0);
+const totalMonthly = TOOLS.filter(activeTool).reduce((s, t) => s + t.monthly, 0);
+const totalAnnual = totalMonthly * 12;
+
+const MONTHLY_TREND = [
+  { month: "Nov", ChatGPT: 2500, Claude: 750, Cursor: 800 },
+  { month: "Dec", ChatGPT: 2625, Claude: 825, Cursor: 960 },
+  { month: "Jan", ChatGPT: 2750, Claude: 900, Cursor: 1080 },
+  { month: "Feb", ChatGPT: 2875, Claude: 975, Cursor: 1200 },
+  { month: "Mar", ChatGPT: 3000, Claude: 1000, Cursor: 1280 },
+  { month: "Apr", ChatGPT: 3000, Claude: 1050, Cursor: 1360 },
+];
+
+const SEAT_GROWTH = [
+  { month: "Nov", seats: 170 },
+  { month: "Dec", seats: 185 },
+  { month: "Jan", seats: 198 },
+  { month: "Feb", seats: 210 },
+  { month: "Mar", seats: 222 },
+  { month: "Apr", seats: 230 },
+];
+
+const REMOVE_CHATGPT = ["alice.t", "ben.k", "carla.m", "derek.j", "emma.w", "frank.r"];
+const REMOVE_CLAUDE = ["grace.h", "ivan.p", "julia.s"];
+const KEEPING_BOTH = ["liam.n", "mia.c", "noah.d", "olivia.f", "peter.g", "quinn.b", "rachel.a", "sam.l", "tina.v", "uma.x", "victor.z", "wendy.q", "xander.j"];
+
+const CURSOR_MODELS = [
+  { model: "claude-sonnet-4-6", tokens: "54.9M", pct: 62 },
+  { model: "cursor-small", tokens: "18.2M", pct: 21 },
+  { model: "gpt-4o", tokens: "9.8M", pct: 11 },
+  { model: "claude-haiku-4-5", tokens: "5.3M", pct: 6 },
+];
+
+const CURSOR_STATS = { aiShare: "66.0%", agentEdits: "108.1K", tabCompletions: "4.5K", messagesSent: "3K" };
+
+// âââ COMPONENTS ââââââââââââââââââââââââââââââââââââââââââââââââââââââ
+function KPI({ label, value, sub }) {
+  return (
+    <div className="kpi">
+      <div className="label">{label}</div>
+      <div className="value">{value}</div>
+      {sub && <div className="sub">{sub}</div>}
+    </div>
+  );
+}
+
+function OverviewTab() {
+  const pieData = TOOLS.filter(activeTool).map(t => ({ name: t.name, value: t.seats }));
+  return (
+    <>
+      <div className="kpi-row">
+        <KPI label="Total Seats" value={totalSeats} sub="Across 3 active tools" />
+        <KPI label="Monthly Spend" value={`$${totalMonthly.toLocaleString()}`} sub="Excludes GitHub Copilot" />
+        <KPI label="Annual Projected" value={`$${totalAnnual.toLocaleString()}`} sub="At current run rate" />
+        <KPI label="Tools Tracked" value={TOOLS.length} sub="1 pending admin access" />
+      </div>
+      <div className="two-col">
+        <div className="card">
+          <h3>Seat Distribution</h3>
+          <div className="chart-container">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={pieData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({name, percent}) => `${name} ${(percent*100).toFixed(0)}%`}>
+                  {pieData.map((_, i) => <Cell key={i} fill={TOOLS.filter(activeTool)[i].color} />)}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="card">
+          <h3>Seat Growth (6 months)</h3>
+          <div className="chart-container">
+            <ResponsiveContainer width="100%" height="100%">
+              <LineChart data={SEAT_GROWTH}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#21262d" />
+                <XAxis dataKey="month" stroke="#8b949e" />
+                <YAxis stroke="#8b949e" />
+                <Tooltip contentStyle={{ background: '#161b22', border: '1px solid #21262d' }} />
+                <Line type="monotone" dataKey="seats" stroke="#7c3aed" strokeWidth={2} dot={{ fill: '#7c3aed' }} />
+              </LineChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      </div>
+      <div className="card">
+        <h3>Tool Inventory</h3>
+        <div className="tool-grid">
+          {TOOLS.map(t => (
+            <div className="tool-card" key={t.name}>
+              <div className="name"><span className="dot" style={{ background: t.color }} />{t.name}</div>
+              <div className="stat">Seats: <span>{t.seats ?? "Pending"}</span></div>
+              <div className="stat">Cost/seat: <span>${t.costPerSeat}/mo</span></div>
+              <div className="stat">Monthly: <span>{t.monthly ? `$${t.monthly.toLocaleString()}` : "N/A"}</span></div>
+              <div className="stat">Status: {t.seats ? <span className="badge badge-green">Active</span> : <span className="badge badge-yellow">Pending</span>}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function CostsTab() {
+  return (
+    <>
+      <div className="kpi-row">
+        {TOOLS.filter(activeTool).map(t => (
+          <KPI key={t.name} label={t.name} value={`$${t.monthly.toLocaleString()}/mo`} sub={`${t.seats} seats Ã $${t.costPerSeat}`} />
+        ))}
+      </div>
+      <div className="card">
+        <h3>Monthly Spend Trend</h3>
+        <div className="chart-container">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={MONTHLY_TREND}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#21262d" />
+              <XAxis dataKey="month" stroke="#8b949e" />
+              <YAxis stroke="#8b949e" />
+              <Tooltip contentStyle={{ background: '#161b22', border: '1px solid #21262d' }} />
+              <Legend />
+              <Bar dataKey="ChatGPT" fill="#10a37f" radius={[4,4,0,0]} />
+              <Bar dataKey="Claude" fill="#d97706" radius={[4,4,0,0]} />
+              <Bar dataKey="Cursor" fill="#3b82f6" radius={[4,4,0,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      <div className="card">
+        <h3>Cost Breakdown</h3>
+        <table>
+          <thead><tr><th>Tool</th><th>Seats</th><th>Cost/Seat</th><th>Monthly</th><th>Annual</th><th>% of Total</th></tr></thead>
+          <tbody>
+            {TOOLS.filter(activeTool).map(t => (
+              <tr key={t.name}>
+                <td style={{fontWeight:600}}>{t.name}</td>
+                <td>{t.seats}</td>
+                <td>${t.costPerSeat}</td>
+                <td>${t.monthly.toLocaleString()}</td>
+                <td>${(t.monthly*12).toLocaleString()}</td>
+                <td>{((t.monthly/totalMonthly)*100).toFixed(1)}%</td>
+              </tr>
+            ))}
+            <tr style={{fontWeight:700, borderTop:'2px solid #21262d'}}>
+              <td>Total</td><td>{totalSeats}</td><td>â</td><td>${totalMonthly.toLocaleString()}</td><td>${totalAnnual.toLocaleString()}</td><td>100%</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
+}
+
+function OptimizationTab() {
+  const confirmedMonthlySavings = REMOVE_CHATGPT.length * 25 + REMOVE_CLAUDE.length * 25;
+  const potentialExtra = KEEPING_BOTH.length * 25;
+  return (
+    <>
+      <div className="savings-box">
+        <h3>Confirmed Savings</h3>
+        <div className="big">${confirmedMonthlySavings}/mo Â· ${(confirmedMonthlySavings*12).toLocaleString()}/yr</div>
+        <p style={{marginTop:8, fontSize:14, color:'#8b949e'}}>From removing {REMOVE_CHATGPT.length + REMOVE_CLAUDE.length} duplicate subscriptions</p>
+      </div>
+      <div className="kpi-row">
+        <KPI label="Remove from ChatGPT" value={REMOVE_CHATGPT.length} sub="Users prefer Claude/Cursor" />
+        <KPI label="Remove from Claude" value={REMOVE_CLAUDE.length} sub="Users prefer ChatGPT" />
+        <KPI label="Keeping Both (TBD)" value={KEEPING_BOTH.length} sub={`Potential extra $${potentialExtra}/mo`} />
+      </div>
+      <div className="two-col">
+        <div className="card">
+          <h3>Remove from ChatGPT</h3>
+          <p style={{fontSize:13, color:'#8b949e', marginBottom:12}}>These users confirmed they primarily use Claude or Cursor</p>
+          <div className="user-list">
+            {REMOVE_CHATGPT.map(u => <span className="user-tag" key={u}>{u}</span>)}
+          </div>
+        </div>
+        <div className="card">
+          <h3>Remove from Claude</h3>
+          <p style={{fontSize:13, color:'#8b949e', marginBottom:12}}>These users confirmed they primarily use ChatGPT</p>
+          <div className="user-list">
+            {REMOVE_CLAUDE.map(u => <span className="user-tag" key={u}>{u}</span>)}
+          </div>
+        </div>
+      </div>
+      <div className="card">
+        <h3>Awaiting Response â Keeping Both</h3>
+        <p style={{fontSize:13, color:'#8b949e', marginBottom:12}}>These {KEEPING_BOTH.length} users have dual subscriptions and haven't responded to the survey yet. Follow up to potentially save an additional ${potentialExtra}/mo.</p>
+        <div className="user-list">
+          {KEEPING_BOTH.map(u => <span className="user-tag" key={u}>{u}</span>)}
+        </div>
+      </div>
+    </>
+  );
+}
+
+function CursorTab() {
+  const modelData = CURSOR_MODELS.map(m => ({ name: m.model, value: m.pct }));
+  const modelColors = ["#7c3aed", "#3b82f6", "#10a37f", "#d97706"];
+  return (
+    <>
+      <div className="kpi-row">
+        <KPI label="AI Share of Committed Code" value={CURSOR_STATS.aiShare} sub="7-day average" />
+        <KPI label="Agent Edits" value={CURSOR_STATS.agentEdits} sub="7-day total" />
+        <KPI label="Tab Completions" value={CURSOR_STATS.tabCompletions} sub="7-day total" />
+        <KPI label="Messages Sent" value={CURSOR_STATS.messagesSent} sub="7-day total" />
+      </div>
+      <div className="two-col">
+        <div className="card">
+          <h3>Token Usage by Model</h3>
+          <div className="chart-container">
+            <ResponsiveContainer width="100%" height="100%">
+              <PieChart>
+                <Pie data={modelData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={100} label={({name, percent}) => `${name.split('/').pop()} ${(percent*100).toFixed(0)}%`}>
+                  {modelData.map((_, i) => <Cell key={i} fill={modelColors[i]} />)}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+        <div className="card">
+          <h3>Model Breakdown</h3>
+          <table>
+            <thead><tr><th>Model</th><th>Tokens</th><th>Share</th></tr></thead>
+            <tbody>
+              {CURSOR_MODELS.map(m => (
+                <tr key={m.model}><td>{m.model}</td><td>{m.tokens}</td><td>{m.pct}%</td></tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div className="card">
+        <h3>Cursor Billing</h3>
+        <div className="kpi-row">
+          <KPI label="Seat Cost" value="$3,005/mo" sub="68 seats (some pro, some business)" />
+          <KPI label="On-Demand Usage" value="$0" sub="No overage this period" />
+          <KPI label="Annual Seat Cost" value="$36,060" sub="At current monthly rate" />
+        </div>
+        <div className="tip-box">
+          <strong>Savings Tip:</strong> Switching 68 Cursor seats to annual billing (~$16/seat/mo vs $20) would save approximately <strong>$272/mo ($3,264/yr)</strong>. If you also consolidate to all-Business tier, annual billing could save up to <strong>$600/mo ($7,200/yr)</strong>.
+        </div>
+      </div>
+    </>
+  );
+}
+
+function App() {
+  const [tab, setTab] = useState("overview");
+  const tabs = [
+    { id: "overview", label: "Overview" },
+    { id: "costs", label: "Costs & Billing" },
+    { id: "optimization", label: "Optimization" },
+    { id: "cursor", label: "Cursor Deep Dive" },
+  ];
+  return (
+    <div className="app">
+      <div className="header">
+        <h1>AI Ops Dashboard</h1>
+        <span className="updated">Last updated: April 2025</span>
+      </div>
+      <div className="tabs">
+        {tabs.map(t => (
+          <button key={t.id} className={`tab ${tab === t.id ? 'active' : ''}`} onClick={() => setTab(t.id)}>{t.label}</button>
+        ))}
+      </div>
+      {tab === "overview" && <OverviewTab />}
+      {tab === "costs" && <CostsTab />}
+      {tab === "optimization" && <OptimizationTab />}
+      {tab === "cursor" && <CursorTab />}
+    </div>
+  );
+}
+
+ReactDOM.render(<App />, document.getElementById('root'));
+</script>
+</body>
+</html>
