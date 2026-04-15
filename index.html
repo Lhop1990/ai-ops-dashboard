@@ -62,7 +62,7 @@ const { PieChart, Pie, Cell, BarChart, Bar, LineChart, Line, XAxis, YAxis, Carte
 const TOOLS = [
   { name: "ChatGPT Business", seats: 120, costPerSeat: 25, color: "#10a37f", monthly: 3000 },
   { name: "Claude Team", seats: 42, costPerSeat: 25, color: "#d97706", monthly: 1050 },
-  { name: "Cursor Team", seats: 68, costPerSeat: 20, color: "#3b82f6", monthly: 1360 },
+  { name: "Cursor Team", seats: 68, costPerSeat: 40, color: "#3b82f6", monthly: 2720 },
   { name: "GitHub Copilot", seats: null, costPerSeat: 19, color: "#8b949e", monthly: null },
 ];
 
@@ -72,12 +72,12 @@ const totalMonthly = TOOLS.filter(activeTool).reduce((s, t) => s + t.monthly, 0)
 const totalAnnual = totalMonthly * 12;
 
 const MONTHLY_TREND = [
-  { month: "Nov", ChatGPT: 2500, Claude: 750, Cursor: 800 },
-  { month: "Dec", ChatGPT: 2625, Claude: 825, Cursor: 960 },
-  { month: "Jan", ChatGPT: 2750, Claude: 900, Cursor: 1080 },
-  { month: "Feb", ChatGPT: 2875, Claude: 975, Cursor: 1200 },
-  { month: "Mar", ChatGPT: 3000, Claude: 1000, Cursor: 1280 },
-  { month: "Apr", ChatGPT: 3000, Claude: 1050, Cursor: 1360 },
+  { month: "Nov", ChatGPT: 2500, Claude: 750, Cursor: 1600 },
+  { month: "Dec", ChatGPT: 2625, Claude: 825, Cursor: 1920 },
+  { month: "Jan", ChatGPT: 2750, Claude: 900, Cursor: 2160 },
+  { month: "Feb", ChatGPT: 2875, Claude: 975, Cursor: 2400 },
+  { month: "Mar", ChatGPT: 3000, Claude: 1000, Cursor: 2560 },
+  { month: "Apr", ChatGPT: 3000, Claude: 1050, Cursor: 2720 },
 ];
 
 const SEAT_GROWTH = [
@@ -302,12 +302,12 @@ function CursorTab() {
       <div className="card">
         <h3>Cursor Billing</h3>
         <div className="kpi-row">
-          <KPI label="Seat Cost" value="$3,005/mo" sub="68 seats (some pro, some business)" />
+          <KPI label="Seat Cost" value="$2,720/mo" sub="68 seats at $40/seat" />
           <KPI label="On-Demand Usage" value="$0" sub="No overage this period" />
-          <KPI label="Annual Seat Cost" value="$36,060" sub="At current monthly rate" />
+          <KPI label="Annual Seat Cost" value="$32,640" sub="At current monthly rate" />
         </div>
         <div className="tip-box">
-          <strong>Savings Tip:</strong> Switching 68 Cursor seats to annual billing (~$16/seat/mo vs $20) would save approximately <strong>$272/mo ($3,264/yr)</strong>. If you also consolidate to all-Business tier, annual billing could save up to <strong>$600/mo ($7,200/yr)</strong>.
+          <strong>Savings Tip:</strong> Switching 68 Cursor seats to annual billing (~$32/seat/mo vs $40) would save approximately <strong>$544/mo ($6,528/yr)</strong>. If you also consolidate to all-Business tier, annual billing could save up to <strong>$816/mo ($9,792/yr)</strong>.
         </div>
       </div>
     </>
