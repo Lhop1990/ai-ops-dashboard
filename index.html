@@ -63,7 +63,7 @@ const TOOLS = [
   { name: "ChatGPT Business", seats: 120, costPerSeat: 25, color: "#10a37f", monthly: 3000 },
   { name: "Claude Team", seats: 42, costPerSeat: 25, color: "#d97706", monthly: 1050 },
   { name: "Cursor Team", seats: 68, costPerSeat: 40, color: "#3b82f6", monthly: 2720 },
-  { name: "GitHub Copilot", seats: null, costPerSeat: 19, color: "#8b949e", monthly: null },
+  { name: "GitHub Copilot", seats: 13, costPerSeat: 19, color: "#8b949e", monthly: 247 },
 ];
 
 const activeTool = (t) => t.seats !== null;
@@ -71,13 +71,19 @@ const totalSeats = TOOLS.filter(activeTool).reduce((s, t) => s + t.seats, 0);
 const totalMonthly = TOOLS.filter(activeTool).reduce((s, t) => s + t.monthly, 0);
 const totalAnnual = totalMonthly * 12;
 
+// AUD conversion (Apr 2026 rate)
+const USD_TO_AUD = 1.40;
+const aud = (usd) => Math.round(usd * USD_TO_AUD).toLocaleString();
+const totalMonthlyAUD = Math.round(totalMonthly * USD_TO_AUD);
+const totalAnnualAUD = Math.round(totalAnnual * USD_TO_AUD);
+
 const MONTHLY_TREND = [
-  { month: "Nov", ChatGPT: 2500, Claude: 750, Cursor: 1600 },
-  { month: "Dec", ChatGPT: 2625, Claude: 825, Cursor: 1920 },
-  { month: "Jan", ChatGPT: 2750, Claude: 900, Cursor: 2160 },
-  { month: "Feb", ChatGPT: 2875, Claude: 975, Cursor: 2400 },
-  { month: "Mar", ChatGPT: 3000, Claude: 1000, Cursor: 2560 },
-  { month: "Apr", ChatGPT: 3000, Claude: 1050, Cursor: 2720 },
+  { month: "Nov", ChatGPT: 2500, Claude: 750, Cursor: 1600, Copilot: 190 },
+  { month: "Dec", ChatGPT: 2625, Claude: 825, Cursor: 1920, Copilot: 209 },
+  { month: "Jan", ChatGPT: 2750, Claude: 900, Cursor: 2160, Copilot: 228 },
+  { month: "Feb", ChatGPT: 2875, Claude: 975, Cursor: 2400, Copilot: 228 },
+  { month: "Mar", ChatGPT: 3000, Claude: 1000, Cursor: 2560, Copilot: 247 },
+  { month: "Apr", ChatGPT: 3000, Claude: 1050, Cursor: 2720, Copilot: 247 },
 ];
 
 const SEAT_GROWTH = [
@@ -159,10 +165,10 @@ function OverviewTab() {
   return (
     <>
       <div className="kpi-row">
-        <KPI label="Total Seats" value={totalSeats} sub="Across 3 active tools" />
-        <KPI label="Monthly Spend" value={`$${totalMonthly.toLocaleString()}`} sub="Excludes GitHub Copilot" />
-        <KPI label="Annual Projected" value={`$${totalAnnual.toLocaleString()}`} sub="At current run rate" />
-        <KPI label="Tools Tracked" value={TOOLS.length} sub="1 pending admin access" />
+        <KPI label="Total Seats" value={totalSeats} sub="Across 4 active tools" />
+        <KPI label="Monthly Spend (USD)" value={`${totalMonthly.toLocaleString()}`} sub={`A${totalMonthlyAUD.toLocaleString()} AUD`} />
+        <KPI label="Annual Projected (USD)" value={`${totalAnnual.toLocaleString()}`} sub={`A${totalAnnualAUD.toLocaleString()} AUD`} />
+        <KPI label="Tools Tracked" value={TOOLS.length} sub="All tools active" />
       </div>
       <div className="two-col">
         <div className="card">
@@ -216,7 +222,7 @@ function CostsTab() {
     <>
       <div className="kpi-row">
         {TOOLS.filter(activeTool).map(t => (
-          <KPI key={t.name} label={t.name} value={`$${t.monthly.toLocaleString()}/mo`} sub={`${t.seats} seats x $${t.costPerSeat}`} />
+          <KPI key={t.name} label={t.name} value={`$${t.monthly.toLocaleString()}/mo`} sub={`A${aud(t.monthly)} AUD \u00b7 ${t.seats} seats \u00d7 ${t.costPerSeat}`} />
         ))}
       </div>
       <div className="card">
@@ -232,6 +238,7 @@ function CostsTab() {
               <Bar dataKey="ChatGPT" fill="#10a37f" radius={[4,4,0,0]} />
               <Bar dataKey="Claude" fill="#d97706" radius={[4,4,0,0]} />
               <Bar dataKey="Cursor" fill="#3b82f6" radius={[4,4,0,0]} />
+              <Bar dataKey="Copilot" fill="#8b949e" radius={[4,4,0,0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
@@ -239,7 +246,7 @@ function CostsTab() {
       <div className="card">
         <h3>Cost Breakdown</h3>
         <table>
-          <thead><tr><th>Tool</th><th>Seats</th><th>Cost/Seat</th><th>Monthly</th><th>Annual</th><th>% of Total</th></tr></thead>
+          <thead><tr><th>Tool</th><th>Seats</th><th>Cost/Seat</th><th>Monthly (USD)</th><th>Monthly (AUD)</th><th>Annual (USD)</th><th>% of Total</th></tr></thead>
           <tbody>
             {TOOLS.filter(activeTool).map(t => (
               <tr key={t.name}>
@@ -247,12 +254,13 @@ function CostsTab() {
                 <td>{t.seats}</td>
                 <td>${t.costPerSeat}</td>
                 <td>${t.monthly.toLocaleString()}</td>
+                <td>A${aud(t.monthly)}</td>
                 <td>${(t.monthly*12).toLocaleString()}</td>
                 <td>{((t.monthly/totalMonthly)*100).toFixed(1)}%</td>
               </tr>
             ))}
             <tr style={{fontWeight:700, borderTop:'2px solid #21262d'}}>
-              <td>Total</td><td>{totalSeats}</td><td>-</td><td>${totalMonthly.toLocaleString()}</td><td>${totalAnnual.toLocaleString()}</td><td>100%</td>
+              <td>Total</td><td>{totalSeats}</td><td>-</td><td>${totalMonthly.toLocaleString()}</td><td>A${totalMonthlyAUD.toLocaleString()}</td><td>${totalAnnual.toLocaleString()}</td><td>100%</td>
             </tr>
           </tbody>
         </table>
@@ -269,6 +277,7 @@ function OptimizationTab() {
       <div className="savings-box">
         <h3>Confirmed Savings</h3>
         <div className="big">${confirmedMonthlySavings}/mo | ${(confirmedMonthlySavings*12).toLocaleString()}/yr</div>
+        <div style={{fontSize:18, fontWeight:600, color:'#3fb950', marginTop:4}}>A${aud(confirmedMonthlySavings)}/mo | A${aud(confirmedMonthlySavings*12)}/yr AUD</div>
         <p style={{marginTop:8, fontSize:14, color:'#8b949e'}}>From removing {REMOVE_CHATGPT.length + REMOVE_CLAUDE.length} duplicate subscriptions</p>
       </div>
       <div className="kpi-row">
@@ -343,9 +352,9 @@ function CursorTab() {
       <div className="card">
         <h3>Cursor Billing</h3>
         <div className="kpi-row">
-          <KPI label="Seat Cost" value="$2,720/mo" sub="68 seats at $40/seat" />
+          <KPI label="Seat Cost" value="$2,720/mo" sub={`A${aud(2720)} AUD \u00b7 68 seats at $40`} />
           <KPI label="On-Demand Usage" value="$0" sub="No overage this period" />
-          <KPI label="Annual Seat Cost" value="$32,640" sub="At current monthly rate" />
+          <KPI label="Annual Seat Cost" value="$32,640" sub={`A${aud(32640)} AUD`} />
         </div>
         <div className="tip-box">
           <strong>Savings Tip:</strong> Switching 68 Cursor seats to annual billing (~$32/seat/mo vs $40) would save approximately <strong>$544/mo ($6,528/yr)</strong>. If you also consolidate to all-Business tier, annual billing could save up to <strong>$816/mo ($9,792/yr)</strong>.
@@ -365,8 +374,8 @@ function TokenCostsTab() {
   return (
     <>
       <div className="kpi-row">
-        <KPI label="Est. Weekly Token Cost" value={`${totalTokenWeekly.toLocaleString()}`} sub="Cursor + Claude combined" />
-        <KPI label="Est. Monthly Token Cost" value={`${totalTokenMonthly.toLocaleString()}`} sub="Projected from weekly usage" />
+        <KPI label="Est. Weekly Token Cost" value={`${totalTokenWeekly.toLocaleString()}`} sub={`A${aud(totalTokenWeekly)} AUD \u00b7 Cursor + Claude`} />
+        <KPI label="Est. Monthly Token Cost" value={`${totalTokenMonthly.toLocaleString()}`} sub={`A${aud(totalTokenMonthly)} AUD \u00b7 Projected from weekly`} />
         <KPI label="Cursor API Value" value={`${totalCursorWeekly.toLocaleString()}/wk`} sub={`vs ${(2720/4.33).toFixed(0)}/wk seat cost`} />
         <KPI label="Claude API Value" value={`${totalClaudeWeekly.toLocaleString()}/wk`} sub={`vs ${(1050/4.33).toFixed(0)}/wk seat cost`} />
       </div>
