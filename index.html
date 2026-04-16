@@ -102,6 +102,47 @@ const CURSOR_MODELS = [
 
 const CURSOR_STATS = { aiShare: "66.0%", agentEdits: "108.1K", tabCompletions: "4.5K", messagesSent: "3K" };
 
+// --- TOKEN COST DATA (Official API rates, Apr 2026) --------------------
+const TOKEN_RATES = [
+  { model: "claude-sonnet-4-6", inputRate: 3, outputRate: 15, color: "#7c3aed" },
+  { model: "claude-haiku-4-5", inputRate: 1, outputRate: 5, color: "#d97706" },
+  { model: "gpt-4o", inputRate: 2.50, outputRate: 10, color: "#10a37f" },
+  { model: "cursor-small", inputRate: 0.50, outputRate: 2, color: "#3b82f6" },
+];
+
+// Cursor 7-day token usage (from Cursor admin dashboard)
+const CURSOR_TOKEN_USAGE = [
+  { model: "claude-sonnet-4-6", totalTokensM: 54.9, inputPct: 0.70 },
+  { model: "cursor-small", totalTokensM: 18.2, inputPct: 0.75 },
+  { model: "gpt-4o", totalTokensM: 9.8, inputPct: 0.70 },
+  { model: "claude-haiku-4-5", totalTokensM: 5.3, inputPct: 0.72 },
+];
+
+// Claude Team estimated usage (42 seats, primarily Sonnet)
+const CLAUDE_TOKEN_USAGE = [
+  { model: "claude-sonnet-4-6", totalTokensM: 32.0, inputPct: 0.65 },
+  { model: "claude-haiku-4-5", totalTokensM: 8.5, inputPct: 0.70 },
+];
+
+// Calculate estimated costs
+function calcWeeklyCost(usageArr) {
+  return usageArr.map(u => {
+    const rate = TOKEN_RATES.find(r => r.model === u.model);
+    if (!rate) return { ...u, weeklyCost: 0 };
+    const inputM = u.totalTokensM * u.inputPct;
+    const outputM = u.totalTokensM * (1 - u.inputPct);
+    const cost = (inputM * rate.inputRate) + (outputM * rate.outputRate);
+    return { ...u, weeklyCost: Math.round(cost), inputCost: Math.round(inputM * rate.inputRate), outputCost: Math.round(outputM * rate.outputRate) };
+  });
+}
+
+const cursorTokenCosts = calcWeeklyCost(CURSOR_TOKEN_USAGE);
+const claudeTokenCosts = calcWeeklyCost(CLAUDE_TOKEN_USAGE);
+const totalCursorWeekly = cursorTokenCosts.reduce((s, c) => s + c.weeklyCost, 0);
+const totalClaudeWeekly = claudeTokenCosts.reduce((s, c) => s + c.weeklyCost, 0);
+const totalTokenWeekly = totalCursorWeekly + totalClaudeWeekly;
+const totalTokenMonthly = Math.round(totalTokenWeekly * 4.33);
+
 // --- COMPONENTS ------------------------------------------------------
 function KPI({ label, value, sub }) {
   return (
@@ -314,6 +355,80 @@ function CursorTab() {
   );
 }
 
+function TokenCostsTab() {
+  const allCosts = [...cursorTokenCosts.map(c => ({...c, platform: "Cursor"})), ...claudeTokenCosts.map(c => ({...c, platform: "Claude"}))];
+  const chartData = TOKEN_RATES.map(r => {
+    const cc = cursorTokenCosts.find(c => c.model === r.model);
+    const cl = claudeTokenCosts.find(c => c.model === r.model);
+    return { name: r.model, Cursor: cc ? cc.weeklyCost : 0, Claude: cl ? cl.weeklyCost : 0 };
+  });
+  return (
+    <>
+      <div className="kpi-row">
+        <KPI label="Est. Weekly Token Cost" value={`${totalTokenWeekly.toLocaleString()}`} sub="Cursor + Claude combined" />
+        <KPI label="Est. Monthly Token Cost" value={`${totalTokenMonthly.toLocaleString()}`} sub="Projected from weekly usage" />
+        <KPI label="Cursor API Value" value={`${totalCursorWeekly.toLocaleString()}/wk`} sub={`vs ${(2720/4.33).toFixed(0)}/wk seat cost`} />
+        <KPI label="Claude API Value" value={`${totalClaudeWeekly.toLocaleString()}/wk`} sub={`vs ${(1050/4.33).toFixed(0)}/wk seat cost`} />
+      </div>
+      <div className="card">
+        <h3>Weekly Token Cost by Model & Platform</h3>
+        <div className="chart-container">
+          <ResponsiveContainer width="100%" height="100%">
+            <BarChart data={chartData}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#21262d" />
+              <XAxis dataKey="name" stroke="#8b949e" tick={{fontSize: 12}} />
+              <YAxis stroke="#8b949e" tickFormatter={v => `${v}`} />
+              <Tooltip contentStyle={{ background: '#161b22', border: '1px solid #21262d' }} formatter={v => `${v}`} />
+              <Legend />
+              <Bar dataKey="Cursor" fill="#3b82f6" radius={[4,4,0,0]} />
+              <Bar dataKey="Claude" fill="#d97706" radius={[4,4,0,0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+      <div className="two-col">
+        <div className="card">
+          <h3>API Rate Card</h3>
+          <table>
+            <thead><tr><th>Model</th><th>Input $/MTok</th><th>Output $/MTok</th></tr></thead>
+            <tbody>
+              {TOKEN_RATES.map(r => (
+                <tr key={r.model}><td>{r.model}</td><td>${r.inputRate.toFixed(2)}</td><td>${r.outputRate.toFixed(2)}</td></tr>
+              ))}
+            </tbody>
+          </table>
+          <div className="tip-box" style={{marginTop:16}}>
+            <strong>Source:</strong> Anthropic official pricing (Apr 2026). GPT-4o from OpenAI. Cursor-small estimated.
+          </div>
+        </div>
+        <div className="card">
+          <h3>Cost Breakdown (7-day)</h3>
+          <table>
+            <thead><tr><th>Platform</th><th>Model</th><th>Tokens</th><th>Est. Cost</th></tr></thead>
+            <tbody>
+              {allCosts.map(c => (
+                <tr key={c.platform+c.model}><td><span className="badge badge-purple">{c.platform}</span></td><td>{c.model}</td><td>{c.totalTokensM}M</td><td>${c.weeklyCost.toLocaleString()}</td></tr>
+              ))}
+              <tr style={{fontWeight:700, borderTop:'2px solid #21262d'}}>
+                <td>Total</td><td>-</td><td>{(CURSOR_TOKEN_USAGE.reduce((s,u)=>s+u.totalTokensM,0) + CLAUDE_TOKEN_USAGE.reduce((s,u)=>s+u.totalTokensM,0)).toFixed(1)}M</td><td>${totalTokenWeekly.toLocaleString()}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div className="savings-box">
+        <h3>Token Cost vs Seat Cost Analysis</h3>
+        <p style={{fontSize:14, color:'#c9d1d9', marginTop:8}}>
+          <strong>Cursor:</strong> Your 68 seats cost <strong>$2,720/mo</strong> in subscriptions. The estimated underlying API token value is <strong>~${Math.round(totalCursorWeekly*4.33).toLocaleString()}/mo</strong> — {totalCursorWeekly*4.33 > 2720 ? "you're getting more API value than you pay, great ROI" : "seat costs exceed raw API value — monitor for underutilization"}.
+        </p>
+        <p style={{fontSize:14, color:'#c9d1d9', marginTop:8}}>
+          <strong>Claude Team:</strong> Your 42 seats cost <strong>$1,050/mo</strong>. Estimated token value is <strong>~${Math.round(totalClaudeWeekly*4.33).toLocaleString()}/mo</strong> — {totalClaudeWeekly*4.33 > 1050 ? "strong usage vs cost" : "consider consolidating seats to reduce spend"}.
+        </p>
+      </div>
+    </>
+  );
+}
+
 function App() {
   const [tab, setTab] = useState("overview");
   const tabs = [
@@ -321,6 +436,7 @@ function App() {
     { id: "costs", label: "Costs & Billing" },
     { id: "optimization", label: "Optimization" },
     { id: "cursor", label: "Cursor Deep Dive" },
+    { id: "tokens", label: "Token Costs" },
   ];
   return (
     <div className="app">
@@ -337,6 +453,7 @@ function App() {
       {tab === "costs" && <CostsTab />}
       {tab === "optimization" && <OptimizationTab />}
       {tab === "cursor" && <CursorTab />}
+      {tab === "tokens" && <TokenCostsTab />}
     </div>
   );
 }
